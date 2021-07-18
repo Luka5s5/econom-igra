@@ -33,11 +33,14 @@ ws.onopen = function() {
 //strategy
 //building-lvl
 //army-numbers
+//resource-numbers
+//victory-points
 
 var resource_names = [];
 var city_names = [];
 var building_names = [];
 var army_names = [];
+var team_names = [];
 
 ws.onmessage = function (evt) { 
     console.log("onmessage: " + evt.data);
@@ -61,6 +64,9 @@ ws.onmessage = function (evt) {
         }
     }
     if(data["teamlist"] != null){
+        for(var team of data["teamlist"]){
+            team_names[team["id"]] = team["name"];
+        }
         var l = document.getElementsByClassName("team-selector");
         if(l != null){
             for(var selector of l){
@@ -117,6 +123,26 @@ ws.onmessage = function (evt) {
                 }
             }
         }
+        var l = document.getElementsByClassName("resource-numbers");
+        if(l != null){
+            for(let lab of l){
+                let id = lab.dataset.team;
+                let type = lab.dataset.type;
+                if(id != null){
+                    lab.innerHTML = data.teamlist[id].resources[type];
+                }
+            }
+        }
+        var l = document.getElementsByClassName("money-numbers");
+        if(l != null){
+            for(let lab of l){
+                let id = lab.dataset.team;
+                let type = lab.dataset.type;
+                if(id != null){
+                    lab.innerHTML = data.teamlist[id].money[type].toFixed(2);
+                }
+            }
+        }
         var l = document.getElementsByClassName("treaty");
         if(l != null){
             for(var btn of l){
@@ -138,6 +164,15 @@ ws.onmessage = function (evt) {
                 }else{
                     btn.classList.remove(btn.dataset.has);
                     btn.classList.add(btn.dataset.hasnt);
+                }
+            }
+        }
+        var l = document.getElementsByClassName("victory-points");
+        if(l != null){
+            for(let lab of l){
+                let id = lab.dataset.team;
+                if(id != null){
+                    lab.innerHTML = data.teamlist[id].victory_points;
                 }
             }
         }
@@ -172,8 +207,10 @@ ws.onmessage = function (evt) {
             for(var el of ll){
                 var city = el.getAttribute("data-city");
                 var resource = el.getAttribute("data-resource");
-                if(city != null && resource != null)
-                    el.innerHTML = data["cities"][city]["resources"][resource]["price"];
+                if(city != null && resource != null){
+                    console.log(data["cities"][city]["resources"][resource]["price"].toFixed(2));
+                    el.innerHTML = data["cities"][city]["resources"][resource]["price"].toFixed(2);
+                }
             }
         }
     }
