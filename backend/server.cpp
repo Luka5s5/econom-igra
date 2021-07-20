@@ -134,7 +134,7 @@ json getAllInfo(){
         "Монастырь"
     };
     response["teamlist"] = json::array({});
-    
+    response["is_cycle"] = game.is_cycle;
     for(auto pl : game.players){
         response["teamlist"].push_back(serializePlayer(pl));
     }
@@ -324,6 +324,27 @@ public:
         }else
         if(j["type"] == "buy_army"){
             Response r = game.upgrade_army(j["team"],j["army"]);
+            json response;
+            response["type"] = "response";
+            response["message"] = r.response;
+            m_server.send(conn,response.dump(),msg->get_opcode()); 
+        }else
+        if(j["type"] == "break_defence_treaties"){
+            Response r = game.break_defence_treaties();
+            json response;
+            response["type"] = "response";
+            response["message"] = r.response;
+            m_server.send(conn,response.dump(),msg->get_opcode()); 
+        }else
+        if(j["type"] == "add_by_treaty"){
+            Response r = game.add_by_treaty(j["team"]);
+            json response;
+            response["type"] = "response";
+            response["message"] = r.response;
+            m_server.send(conn,response.dump(),msg->get_opcode()); 
+        }else
+        if(j["type"] == "add_indie_side"){
+            Response r = game.add_indie_side(j["team"],j["is_attacker"]);
             json response;
             response["type"] = "response";
             response["message"] = r.response;
