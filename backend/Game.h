@@ -14,7 +14,7 @@ public:
     // Tech
     void init(); // Use this method with first call of current().
     static Game& current();
-    Response register_player();
+    Response register_player(std::string name);
     Response start_cycle();
     Response end_cycle();
 
@@ -25,9 +25,13 @@ public:
     Response sell_query(int player_id, int city_id, std::vector<int> resource_array);
 
     // War
+    Response add_by_treaty(int id);
+    Response add_indie_side(int id, int is_attacker);
+    Response break_defence_treaties();
+
     Response set_strategy(int player_id, int new_strategy);
     Response declare_war(int id_att, int id_def);
-    Response add_top_war(int is_attack, int id);
+    // Response add_top_war(int is_attack, int id);
     Response proceed_top_war();
     Response concede_top_war(int attack_won);
     Response stop_top_war();
@@ -39,7 +43,7 @@ public:
 
     // Upgrades
     Response upgrade_army(int player_id, std::vector<int> army);
-    Response upgrade_building(int player_id, std::vector<int> buildings);
+    Response upgrade_building(int player_id, int building_id);
 
     // Not for frontend
     std::vector<int> get_player_army(int id);

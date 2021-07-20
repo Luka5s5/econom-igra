@@ -1,4 +1,5 @@
 #include "Game.h"
+#include <cmath>
 
 template <typename T>
 std::vector<T> changed_sign(std::vector<T> v) {
@@ -39,10 +40,12 @@ void Game::kill_troop(int id, int troop_type){
 }
 
 
-Response Game::upgrade_building(int player_id, std::vector<int> buildings) {
+Response Game::upgrade_building(int player_id, int building_id) {
     if (!is_cycle) {
         return Response{false, "Цикл не идёт"};
     }
+    std::vector<int> buildings(11);
+    buildings[building_id] = 1;
     Player& player = players[player_id];
     bool accepted = true;
     for (int i = 0; i < buildings.size(); i++) {
@@ -166,14 +169,18 @@ Response Game::start_cycle() {
     if (is_cycle) {
         return Response{false, "Цикл уже идёт."};
     }
+    if (wars.size() != 0) {
+        return Response{false, "Сперва закончите войны"};
+    }
     is_cycle = true;
-    dumpload(std::to_string(current_round++) + ".txt");
+    dumpload(std::to_string(current_round) + ".txt");
     for (auto& city: cities) {
         city.update_plots();
     }
     for (auto& player: players) {
         player.mine_resources();
     }
+    current_round++;
     return Response{true, "Цикл начат."};
 }
 
@@ -191,8 +198,15 @@ Response Game::end_cycle() {
     return Response{true, "Цикл окончен."};
 }
 
-Response Game::register_player() {
+Response Game::register_player(std::string name) {
+    if (is_cycle) {
+        return Response{false, "Регистрация доступна только вне раунда"};
+    }
+    if (name == "") {
+        return Response{false, "Пустое имя недопустимо."};
+    }
     players.push_back(Player(players.size()));
+    players.back().name = name; 
     return Response{true, std::to_string(players.size() - 1) + " - Номер нового игрока", (int)players.size()-1};
 }
 
@@ -327,7 +341,7 @@ void Game::init() {
     auto bool_pass = [](Player& p, std::vector<int>& resources) {return true;};
     auto pass = [](Player& p, std::vector<int>& resources){return;};
     auto varant = [](Player& p, std::vector<int>& resources){ // после сделки нужно уменьшить золото на 10%
-        p.resources[0] *= 0.9;
+        p.resources[0] = lround(p.resources[0] * 0.9);
     };
     auto liberty = [](Player& p, std::vector<int>& resources){ // Перед покупкой нужно проверить на вино
         if (resources[6] != 0 && rand() % 5 == 0) {
@@ -401,8 +415,10 @@ Response Game::dumpload(std::string filename) {
     file.open(filename);
     file << current_round << std::endl;
     file << players.size() << std::endl;
-    for (auto& player: players)
+    for (auto& player: players) {
+        file << player.name << std::endl;  
         player.dumpload(file);
+    }
     for (auto& city: cities)
         city.dumpload(file);
     file.close();
@@ -419,10 +435,10 @@ Response Game::load(std::string filename) {
     int player_count = 0;
     file >> player_count;
     for (int i = 0; i < player_count; i++) {
-        register_player();
-    }
-    for (auto& player: players) {
-        player.load(file);
+        std::string name;
+        file >> name;
+        register_player(name);
+        players.back().load(file);
     }
     for (auto& city: cities)
         city.load(file);
@@ -441,6 +457,9 @@ Response Game::declare_war(int id_att, int id_def) {
     if (!is_cycle) {
         return Response{false, "Цикл не идёт"};
     }
+    if (id_att == id_def) {
+        return Response{false, "Выберите разные команды"};
+    }
     bool flag=1;
     for(auto& war:wars) flag=(flag and war.attacker_id!=id_att or war.defender_id!=id_def);
     if(!flag)
@@ -449,30 +468,30 @@ Response Game::declare_war(int id_att, int id_def) {
     return Response{1,"Всё чикипуки"};
 }
 
-Response Game::add_top_war(int is_attack, int id) {
-    if (!is_cycle) {
-        return Response{false, "Цикл не идёт"};
-    }
-    bool flag=1;
-    for(auto i:wars.front().a_side_ids){
-        flag=(flag && i!=id);
-    }
-    for(auto i:wars.front().d_side_ids){
-        flag=(flag && i!=id);
-    }
-    if(!flag) return Response{0,"уже зареган в войну"};
-    if(is_attack==1){
-        wars.front().add_attacker(id);
-    }
-    else{
-        wars.front().add_defender(id);
-    }
-    return Response{1,"Все ок"};
-}
+// Response Game::add_top_war(int is_attack, int id) {
+//     if (!is_cycle) {
+//         return Response{false, "Цикл не идёт"};
+//     }
+//     bool flag=1;
+//     for(auto i:wars.front().a_side_ids){
+//         flag=(flag && i!=id);
+//     }
+//     for(auto i:wars.front().d_side_ids){
+//         flag=(flag && i!=id);
+//     }
+//     if(!flag) return Response{0,"уже зареган в войну"};
+//     if(is_attack==1){
+//         wars.front().add_attacker(id);
+//     }
+//     else{
+//         wars.front().add_defender(id);
+//     }
+//     return Response{1,"Все ок"};
+// }
 
 Response Game::proceed_top_war() {
-    if (!is_cycle) {
-        return Response{false, "Цикл не идёт"};
+    if (is_cycle) {
+        return Response{false, "Закончите цикл"};
     }
     if(wars.size()==0) return Response{0,"Нет воин"};
     if(wars.front().step==4){
@@ -484,20 +503,55 @@ Response Game::proceed_top_war() {
 }
 
 Response Game::concede_top_war(int attack_won) {
-    if (!is_cycle) {
-        return Response{false, "Цикл не идёт"};
+    if (is_cycle) {
+        return Response{false, "Закончите цикл"};
     }
     if(wars.size()==0) return Response{0,"Нет воин"};
+    wars.front().init_war();
     wars.front().step=4;
     wars.front().someone_won(attack_won);
     wars.pop_front();
     return Response{1,"Война закончена все посчитатно"};
 }
 Response Game::stop_top_war() {
-    if (!is_cycle) {
-        return Response{false, "Цикл не идёт"};
+    if (is_cycle) {
+        return Response{false, "Закончите цикл"};
     }
     if(wars.size()==0) return Response{0,"Нет воин"};
     wars.pop_front();
     return Response{1,"Война закончилась миром"};
+}
+
+Response Game::add_by_treaty(int id){
+    if(wars.size()==0) return Response{0,"Нет воин"};
+    bool ans=wars.front().add_by_treaty(id);
+    if(ans){
+        return Response{1, "Добавился, все ок"};
+    }
+    else{
+        return Response{0, "Либо нет договора, либо уже добавлен"};
+    }
+}
+
+Response Game::add_indie_side(int id, int is_attacker){
+    if(wars.size()==0) return Response{0,"Нет воин"};
+    bool ans=wars.front().add_indie_side(id,is_attacker);
+    if(ans){
+        return Response{1, "Добавился"};
+    }
+    else{
+        return Response{0, "Кажется он уже добавлен"};
+    }
+}
+
+
+Response Game::break_defence_treaties(){
+    if(wars.size()==0) return Response{0,"Нет воин"};
+    bool ans=wars.front().break_defence_treaties();
+    if(ans){
+        return Response{1, "Урааааа!!!!"};
+    }
+    else{
+        return Response{0, "Чтото пошло не так"};
+    }
 }
