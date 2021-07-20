@@ -507,6 +507,7 @@ Response Game::concede_top_war(int attack_won) {
         return Response{false, "Закончите цикл"};
     }
     if(wars.size()==0) return Response{0,"Нет воин"};
+    wars.front().init_war();
     wars.front().step=4;
     wars.front().someone_won(attack_won);
     wars.pop_front();
