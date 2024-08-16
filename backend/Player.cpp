@@ -107,6 +107,7 @@ Player::Player(int id1) {
 
 void Player::load(std::ifstream &file) {
     file >> id;
+    std::cout << id << "\n";
     read(file, currencies);
     read(file, resources);
     read(file, building_levels);

@@ -196,7 +196,7 @@ Response Game::end_cycle() {
         player.city_used.assign(4, 0);
         player.building_used.assign(11, 0);
     }
-    for(auto war:Game::current().wars){
+    for(auto& war:Game::current().wars){
         war.init_war();
         if(Game::current().players[war.attacker_id].treaties[0].count(war.defender_id) || Game::current().players[war.attacker_id].treaties[1].count(war.defender_id)){
 			Game::current().players[war.attacker_id].ban = 1;
@@ -459,7 +459,9 @@ Response Game::load(std::string filename) {
     file >> player_count;
     for (int i = 0; i < player_count; i++) {
         std::string name;
-        file >> name;
+        while(name == "" || std::isspace(name[0]))
+            std::getline(file, name);
+        std::cout << "\"" << name << "\"\n";
         register_player(name);
         players.back().load(file);
     }
@@ -520,10 +522,14 @@ Response Game::proceed_top_war() {
     if(wars.size()==0) return Response{0,"Нет воин"};
     if(wars.front().total_att==0 and wars.front().total_def==0){
         wars.pop_front();
+        if(wars.size()!=0)
+            wars.front().init_war();
         return Response{true,"Война 0 на 0 авто-сдана, все чикипуки."};
     }
     if(wars.front().step==4){
         wars.pop_front();
+        if(wars.size()!=0)
+            wars.front().init_war();
         return Response{1,"Война закончена все посчитатно"};
     }
     wars.front().progress_war();
@@ -538,15 +544,21 @@ Response Game::concede_top_war(int attack_won) {
     wars.front().init_war();
     if(wars.front().total_att==0 and wars.front().total_def==0){
         wars.pop_front();
+        if(wars.size()!=0)
+            wars.front().init_war();
         return Response{true,"Война 0 на 0 сдана, все чикипуки."};
     }
     if((attack_won and wars.front().total_att==0) or (!attack_won and wars.front().total_def==0)){
         wars.pop_front();
+        if(wars.size()!=0)
+            wars.front().init_war();
         return Response{true,"Сдались нулевой армии, ничего не происходит."};
     }
     wars.front().step=4;
     wars.front().someone_won(attack_won);
     wars.pop_front();
+    if(wars.size()!=0)
+        wars.front().init_war();
     return Response{1,"Война закончена все посчитатно"};
 }
 Response Game::stop_top_war() {
@@ -555,6 +567,8 @@ Response Game::stop_top_war() {
     }
     if(wars.size()==0) return Response{0,"Нет воин"};
     wars.pop_front();
+    if(wars.size()!=0)
+        wars.front().init_war();
     return Response{1,"Война закончилась миром"};
 }
 
