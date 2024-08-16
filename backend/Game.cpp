@@ -196,7 +196,7 @@ Response Game::end_cycle() {
         player.city_used.assign(4, 0);
         player.building_used.assign(11, 0);
     }
-    for(auto war:Game::current().wars){
+    for(auto& war:Game::current().wars){
         war.init_war();
         if(Game::current().players[war.attacker_id].treaties[0].count(war.defender_id) || Game::current().players[war.attacker_id].treaties[1].count(war.defender_id)){
 			Game::current().players[war.attacker_id].ban = 1;
@@ -378,10 +378,19 @@ void Game::init() {
         return false;
     };
     auto bool_pass_mordor = [](Player& p, std::vector<int>& resources) { // Проверка на последнюю войну
-        return (p.last_attack <= 3);
+        return (p.last_attack <= 3) && resources[7] == 0 && resources[8] == 0 && resources[10] == 0;
     };
     auto bool_pass_talas = [](Player& p, std::vector<int>& resources) { // Проверка на последнюю войну
-        return (p.last_attack > 1);
+        return (p.last_attack > 1) && resources[7] == 0 && resources[8] == 0 && resources[9] == 0;
+    };
+    auto bool_pass_varant = [](Player& p, std::vector<int>& resources) { // Проверка на ресурсы
+        for(int i : resources)
+            std::cout << i << " ";
+        std::cout << std::endl;
+        return resources[8] == 0 && resources[9] == 0 && resources[10] == 0;
+    };
+    auto bool_pass_liberty = [](Player& p, std::vector<int>& resources) { // Проверка на ресурсы
+        return resources[7] == 0 && resources[9] == 0 && resources[10] == 0;
     };
     cities.push_back(City(0, {{1.4132, 0, -0.4548, 1000}, //Варант
                               {0.4843, 0, -0.4936, 1000},
@@ -394,7 +403,7 @@ void Game::init() {
                               {0.0000000001, 0, -1, 1000000},
                               {0.0000000001, 0, -1, 1000000},
                               {0.0000000001, 0, -1, 1000000}
-    }, bool_pass, bool_pass, varant));
+    }, bool_pass_varant, bool_pass, varant));
     cities.push_back(City(1, {{0.5947, 0, -0.1812, 1000}, // Либерти
                               {0.0344, 0, -0.3021, 1000},
                               {0.0685, 0, -0.2159, 1000},
@@ -406,7 +415,7 @@ void Game::init() {
                               {0.0001, 0, -0.0001, 100},
                               {0.0000000001, 0, -1, 1000000},
                               {0.0000000001, 0, -1, 1000000}
-    }, bool_pass, liberty, bool_pass));
+    }, bool_pass_liberty, liberty, bool_pass));
     cities.push_back(City(2, {{0.0954, 0, -0.1019, 1000}, // Мордор
                               {0.1033, 0, -0.0131, 1000},
                               {0.1750, 0, -0.0258, 1000},
@@ -459,7 +468,9 @@ Response Game::load(std::string filename) {
     file >> player_count;
     for (int i = 0; i < player_count; i++) {
         std::string name;
-        file >> name;
+        while(name == "" || std::isspace(name[0]))
+            std::getline(file, name);
+        std::cout << "\"" << name << "\"\n";
         register_player(name);
         players.back().load(file);
     }
@@ -520,10 +531,14 @@ Response Game::proceed_top_war() {
     if(wars.size()==0) return Response{0,"Нет воин"};
     if(wars.front().total_att==0 and wars.front().total_def==0){
         wars.pop_front();
+        if(wars.size()!=0)
+            wars.front().init_war();
         return Response{true,"Война 0 на 0 авто-сдана, все чикипуки."};
     }
     if(wars.front().step==4){
         wars.pop_front();
+        if(wars.size()!=0)
+            wars.front().init_war();
         return Response{1,"Война закончена все посчитатно"};
     }
     wars.front().progress_war();
@@ -538,15 +553,21 @@ Response Game::concede_top_war(int attack_won) {
     wars.front().init_war();
     if(wars.front().total_att==0 and wars.front().total_def==0){
         wars.pop_front();
+        if(wars.size()!=0)
+            wars.front().init_war();
         return Response{true,"Война 0 на 0 сдана, все чикипуки."};
     }
     if((attack_won and wars.front().total_att==0) or (!attack_won and wars.front().total_def==0)){
         wars.pop_front();
+        if(wars.size()!=0)
+            wars.front().init_war();
         return Response{true,"Сдались нулевой армии, ничего не происходит."};
     }
     wars.front().step=4;
     wars.front().someone_won(attack_won);
     wars.pop_front();
+    if(wars.size()!=0)
+        wars.front().init_war();
     return Response{1,"Война закончена все посчитатно"};
 }
 Response Game::stop_top_war() {
@@ -555,6 +576,8 @@ Response Game::stop_top_war() {
     }
     if(wars.size()==0) return Response{0,"Нет воин"};
     wars.pop_front();
+    if(wars.size()!=0)
+        wars.front().init_war();
     return Response{1,"Война закончилась миром"};
 }
 
