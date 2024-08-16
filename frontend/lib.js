@@ -305,6 +305,7 @@ ws.onmessage = function (evt) {
         var ll = document.getElementsByClassName("atk-death");
         if(ll != null){
             for(let el of ll){
+                el.innerHTML = sum_atk
                 el.style.width = (100*sum_atk/war.attackers_initial_army)+"%";
             }
         }
@@ -345,6 +346,7 @@ ws.onmessage = function (evt) {
         var ll = document.getElementsByClassName("def-death");
         if(ll != null){
             for(let el of ll){
+                el.innerHTML = sum_def
                 el.style.width = (100*sum_def/war.defenders_initial_army)+"%";
             }
         }
